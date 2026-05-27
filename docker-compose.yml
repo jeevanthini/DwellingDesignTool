@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: archigen-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: archigen
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - archigen-network
+
+  backend:
+    build: ./server
+    container_name: archigen-backend
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/archigen?authSource=admin
+      JWT_SECRET: your_production_jwt_secret
+      JWT_EXPIRE: 30d
+      AI_ENGINE_URL: http://ai-engine:5001
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+      - ai-engine
+    networks:
+      - archigen-network
+
+  ai-engine:
+    build: ./ai-engine
+    container_name: archigen-ai-engine
+    ports:
+      - "5001:5001"
+    networks:
+      - archigen-network
+
+  frontend:
+    build: ./client
+    container_name: archigen-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - archigen-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  archigen-network:
+    driver: bridge
